@@ -27,12 +27,14 @@ public class LogstashSendStep extends Step
 
   private int maxLines;
   private boolean failBuild;
+  private String logFile;
 
   @DataBoundConstructor
-  public LogstashSendStep(int maxLines, boolean failBuild)
+  public LogstashSendStep(int maxLines, boolean failBuild, String logFile)
   {
     this.maxLines = maxLines;
     this.failBuild = failBuild;
+    this.logFile = logFile;
   }
 
   public int getMaxLines()
@@ -48,7 +50,7 @@ public class LogstashSendStep extends Step
   @Override
   public StepExecution start(StepContext context) throws Exception
   {
-    return new Execution(context, maxLines, failBuild);
+    return new Execution(context, maxLines, failBuild, logFile);
   }
 
   @SuppressFBWarnings(value="SE_TRANSIENT_FIELD_NOT_RESTORED", justification="Only used when starting.")
@@ -59,12 +61,14 @@ public class LogstashSendStep extends Step
 
     private transient final int maxLines;
     private transient final boolean failBuild;
+    private transient final String logFile;
 
-    Execution(StepContext context, int maxLines, boolean failBuild)
+    Execution(StepContext context, int maxLines, boolean failBuild, String logFile)
     {
       super(context);
       this.maxLines = maxLines;
       this.failBuild = failBuild;
+      this.logFile = logFile;
     }
 
     @Override
@@ -74,7 +78,7 @@ public class LogstashSendStep extends Step
       TaskListener listener = getContext().get(TaskListener.class);
       PrintStream errorStream = listener.getLogger();
       LogstashWriter logstash = new LogstashWriter(run, errorStream, listener, run.getCharset());
-      logstash.writeBuildLog(maxLines);
+      logstash.writeBuildLog(maxLines, logFile);
       if (failBuild && logstash.isConnectionBroken())
       {
         throw new Exception("Failed to send data to Indexer");

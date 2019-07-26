@@ -122,7 +122,7 @@ public class RabbitMqDao extends HostBasedLogstashIndexerDao {
    * @see jenkins.plugins.logstash.persistence.LogstashIndexerDao#push(java.lang.String)
    */
   @Override
-  public void push(String data) throws IOException {
+  public void push(String data, String id) throws IOException {
     Connection connection = null;
     Channel channel = null;
     try {

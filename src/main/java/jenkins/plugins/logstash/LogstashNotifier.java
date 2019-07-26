@@ -57,15 +57,16 @@ import org.jenkinsci.Symbol;
  */
 public class LogstashNotifier extends Notifier implements SimpleBuildStep {
 
+  private int maxLines;
+  private boolean failBuild;
+  private String logFile;
   private static final Logger LOGGER = Logger.getLogger(LogstashNotifier.class.getName());
 
-  private final int maxLines;
-  private final boolean failBuild;
-
   @DataBoundConstructor
-  public LogstashNotifier(int maxLines, boolean failBuild) {
+  public LogstashNotifier(int maxLines, boolean failBuild, String logFile) {
     this.maxLines = maxLines;
     this.failBuild = failBuild;
+    this.logFile = logFile;
   }
 
   public int getMaxLines()
@@ -77,6 +78,8 @@ public class LogstashNotifier extends Notifier implements SimpleBuildStep {
   {
     return failBuild;
   }
+
+  public String getLogFile() { return logFile;}
 
   @Override
   public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) {
@@ -101,7 +104,7 @@ public class LogstashNotifier extends Notifier implements SimpleBuildStep {
 
     PrintStream errorPrintStream = listener.getLogger();
     LogstashWriter logstash = getLogStashWriter(run, errorPrintStream, listener);
-    logstash.writeBuildLog(maxLines);
+    logstash.writeBuildLog(maxLines, logFile);
     return !(failBuild && logstash.isConnectionBroken());
   }
 

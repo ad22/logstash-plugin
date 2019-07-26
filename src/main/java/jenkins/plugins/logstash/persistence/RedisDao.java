@@ -82,7 +82,7 @@ public class RedisDao extends HostBasedLogstashIndexerDao {
   }
 
   @Override
-  public void push(String data) throws IOException {
+  public void push(String data, String id) throws IOException {
     Jedis jedis = null;
     boolean connectionBroken = false;
     try {

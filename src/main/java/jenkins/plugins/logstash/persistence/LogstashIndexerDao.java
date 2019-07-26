@@ -25,6 +25,8 @@
 package jenkins.plugins.logstash.persistence;
 
 import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.List;
 
 import net.sf.json.JSONObject;
@@ -64,7 +66,7 @@ public interface LogstashIndexerDao {
    * @throws java.io.IOException
    *          The data is not written to the server
    */
-  void push(String data) throws IOException;
+  void push(String data, String id) throws IOException;
 
   /**
    * Builds a JSON payload compatible with the Logstash schema.

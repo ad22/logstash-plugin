@@ -167,8 +167,9 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
     this.customKeyStore = customKeyStore;
   }
 
-  HttpPost getHttpPost(String data) {
-    HttpPost postRequest = new HttpPost(uri);
+  HttpPost getHttpPost(String data, String id) {
+    URI idUri = uri.resolve(uri.getPath() + "/" + id);
+    HttpPost postRequest = new HttpPost(idUri);
     String mimeType = this.getMimeType();
     // char encoding is set to UTF_8 since this request posts a JSON string
     StringEntity input = new StringEntity(data, StandardCharsets.UTF_8);
@@ -182,8 +183,8 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
   }
 
   @Override
-  public void push(String data) throws IOException {
-    HttpPost post = getHttpPost(data);
+  public void push(String data, String id) throws IOException {
+    HttpPost post = getHttpPost(data, id);
 
     try (CloseableHttpClient httpClient = clientBuilder.build(); CloseableHttpResponse response = httpClient.execute(post)) {
       if (!successCodes.contains(response.getStatusLine().getStatusCode())) {

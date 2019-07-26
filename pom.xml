@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>logstash</artifactId>
-  <version>2.3.2</version>
+  <version>2.3.2-ESSD-CUSTOM</version>
   <packaging>hpi</packaging>
 
   <name>Logstash</name>
@@ -48,14 +48,14 @@
   </scm>
   <distributionManagement>
     <repository>
-      <id>maven.jenkins-ci.org</id>
+      <id>artifactory.wdc.com</id>
       <name>jenkinsci-releases</name>
-      <url>https://repo.jenkins-ci.org/releases</url>
+      <url>https://artifactory.wdc.com/artifactory/essd-maven-archive-uls</url>
     </repository>
     <snapshotRepository>
-      <id>maven.jenkins-ci.org</id>
+      <id>artifactory.wdc.com</id>
       <name>jenkinsci-snapshots</name>
-      <url>https://repo.jenkins-ci.org/snapshots</url>
+      <url>https://artifactory.wdc.com/artifactory/essd-maven-archive-uls</url>
     </snapshotRepository>
   </distributionManagement>
 

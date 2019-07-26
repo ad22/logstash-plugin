@@ -39,7 +39,7 @@ public class SyslogDao extends HostBasedLogstashIndexerDao {
   }
 
   @Override
-  public void push(String data) throws IOException {
+  public void push(String data, String id) throws IOException {
     // Making the JSON document compliant to Common Event Expression (CEE)
     // Ref: http://www.rsyslog.com/json-elasticsearch/
     data = " @cee: "  + data;

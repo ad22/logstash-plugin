@@ -25,22 +25,29 @@
 package jenkins.plugins.logstash;
 
 
+import hudson.FilePath;
 import hudson.model.AbstractBuild;
+import hudson.model.Executor;
 import hudson.model.TaskListener;
 import hudson.model.Run;
 import jenkins.model.Jenkins;
 import jenkins.plugins.logstash.persistence.BuildData;
 import jenkins.plugins.logstash.persistence.LogstashIndexerDao;
 import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.net.URL;
+import java.net.MalformedURLException;
+
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * A writer that wraps all Logstash DAOs.  Handles error reporting and per build connection state.
@@ -115,15 +122,21 @@ public class LogstashWriter {
    * @param maxLines
    *          Maximum number of lines to be written.  Negative numbers mean "all lines".
    */
-  public void writeBuildLog(int maxLines) {
+  public void writeBuildLog(int maxLines, String logFile) {
     if (!isConnectionBroken()) {
       // FIXME: build.getLog() won't have the last few lines like "Finished: SUCCESS" because this hasn't returned yet...
       List<String> logLines;
       try {
         if (maxLines < 0) {
           logLines = build.getLog(Integer.MAX_VALUE);
+          if (logFile != null && !logFile.isEmpty()) {
+            logLines.addAll(getBuildLogFromFile(maxLines, logFile));
+          }
         } else {
           logLines = build.getLog(maxLines);
+          if (logFile != null && !logFile.isEmpty()) {
+            logLines.addAll(getBuildLogFromFile(maxLines - logLines.size(), logFile));
+          }
         }
       } catch (IOException e) {
         String msg = "[logstash-plugin]: Unable to serialize log data.\n" +
@@ -136,6 +149,54 @@ public class LogstashWriter {
 
       write(logLines);
     }
+  }
+
+  /**
+   * Sends a logstash payload containing log lines from the current build.
+   * Call will be ignored if the connection to the indexer is broken.
+   *
+   * @param maxLines
+   *          Maximum number of lines to be retuned. An exact number of lines should be passed into
+   *          this method. A negative value indicates "all lines"
+   * @return List of lines
+   */
+  public List<String> getBuildLogFromFile(int maxLines, String logFile) {
+    List<String> logLines;
+    Executor executor = build.getExecutor();
+    if (executor != null) {
+      FilePath workspace = executor.getCurrentWorkspace();
+      if (workspace != null) {
+        FilePath logPath = new FilePath(workspace, logFile);
+        try {
+          if (logPath.exists() && !logPath.isDirectory()) {
+            logLines = IOUtils.readLines(logPath.read(), charset);
+            int size = logLines.size();
+            if (maxLines >= size || maxLines < 0) {
+              return logLines;
+            } else {
+              List<String> subLogLines;
+              try {
+                subLogLines = logLines.subList(size - maxLines, size);
+                return subLogLines;
+              } catch (IndexOutOfBoundsException x) {
+                x.printStackTrace();
+              }
+            }
+          }
+        } catch (InterruptedException y) {
+          //pass
+        } catch (IOException z) {
+          String msg = "[logstash-plugin]: I/O error while reading log file.\n" +
+                  ExceptionUtils.getStackTrace(z);
+          try {
+            errorStream.write(msg.getBytes(charset));
+          } catch (IOException ex) {
+            ex.printStackTrace();
+          }
+        }
+      }
+    }
+    return new ArrayList<String>();
   }
 
   /**
@@ -162,6 +223,15 @@ public class LogstashWriter {
     return Jenkins.getInstance().getRootUrl();
   }
 
+  URL getParsedJenkinsUrl() throws MalformedURLException {
+    URL parsedUrl = new URL(jenkinsUrl);
+    return parsedUrl;
+  }
+
+  String getJenkinsHost() throws MalformedURLException {
+    return getParsedJenkinsUrl().getHost();
+  }
+
   /**
    * Write a list of lines to the indexer as one Logstash payload.
    */
@@ -169,7 +239,8 @@ public class LogstashWriter {
     buildData.updateResult();
     JSONObject payload = dao.buildPayload(buildData, jenkinsUrl, lines);
     try {
-      dao.push(payload.toString());
+      String id = getJenkinsHost() + "_" + build.getParent().getName() + "_" + String.valueOf(build.getNumber());
+      dao.push(payload.toString(), id);
     } catch (IOException e) {
       String msg = "[logstash-plugin]: Failed to send log data: " + dao.getDescription() + ".\n" +
         "[logstash-plugin]: No Further logs will be sent to " + dao.getDescription() + ".\n" +

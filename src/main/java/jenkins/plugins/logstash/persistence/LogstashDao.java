@@ -12,7 +12,7 @@ public class LogstashDao extends HostBasedLogstashIndexerDao {
   }
 
   @Override
-  public void push(String data) throws IOException {
+  public void push(String data, String id) throws IOException {
 
     try (Socket logstashClientSocket = new Socket(getHost(), getPort()))
     {
